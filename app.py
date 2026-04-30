@@ -7,7 +7,7 @@ import numpy as np
 import os
 import nltk
 
-from nltk.corpus import stopwords
+from nltk.corpus import stopwords, wordnet
 from nltk.stem import WordNetLemmatizer
 from urllib.parse import urlparse
 from scipy.sparse import hstack
