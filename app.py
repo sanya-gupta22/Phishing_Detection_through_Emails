@@ -35,14 +35,17 @@ except:
     nltk.download('wordnet')
     lemmatizer = WordNetLemmatizer()
 
-# Load
-model = joblib.load("model.pkl")
-vectorizer = joblib.load("vectorizer.pkl")
+# ---------------- LOAD MODEL ----------------
+try:
+    model = joblib.load(MODEL_PATH)
+    vectorizer = joblib.load(VECTORIZER_PATH)
+    print(" Model & Vectorizer loaded successfully")
+except Exception as e:
+    print(" Error loading model:", e)
+    model = None
+    vectorizer = None
 
-stop_words = set(stopwords.words('english'))
-lemmatizer = WordNetLemmatizer()
-
-# ---------------- SAME FUNCTIONS ----------------
+# ----------------  FUNCTIONS ----------------
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r'http\S+|www\S+', 'URL', text)
@@ -84,6 +87,9 @@ def extract_features(text):
 # ---------------- API ----------------
 @app.route("/predict", methods=["POST"])
 def predict():
+    if model is None or vectorizer is None:
+        return jsonify({"error": "Model not loaded"}), 500
+
     data = request.json.get("text", "")
 
     cleaned = clean_text(data)
@@ -93,7 +99,7 @@ def predict():
     final_input = hstack((text_vec, extra))
 
     prob = model.predict_proba(final_input)[0][1]
-    pred = int(prob >= 0.4)
+    pred = int(prob >= THRESHOLD)
 
     return jsonify({
         "prediction": pred,
@@ -103,7 +109,10 @@ def predict():
 
 @app.route("/")
 def home():
-    return "API Running "
+    return "API Running"
 
+# ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+    
