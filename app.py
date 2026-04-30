@@ -12,23 +12,22 @@ from nltk.stem import WordNetLemmatizer
 from urllib.parse import urlparse
 from scipy.sparse import hstack
 
-nltk.data.path.append(os.path.join(os.getcwd(), "nltk_data"))
+# ---------------- INIT ----------------
 app = Flask(__name__)
 CORS(app)
 
-# ---------------- ENV VARIABLES ----------------
+# ---------------- ENV ----------------
 MODEL_PATH = os.environ.get("MODEL_PATH", "model.pkl")
 VECTORIZER_PATH = os.environ.get("VECTORIZER_PATH", "vectorizer.pkl")
 THRESHOLD = float(os.environ.get("THRESHOLD", 0.4))
-
-# Optional: for Render NLTK fix
 NLTK_DATA = os.environ.get("NLTK_DATA", "/opt/render/nltk_data")
 
-# ---------------- NLTK SETUP ----------------
 nltk.data.path.append(NLTK_DATA)
+
+# ---------------- NLTK ----------------
 try:
     stop_words = set(stopwords.words('english'))
-except LookupError:
+except:
     nltk.download('stopwords')
     stop_words = set(stopwords.words('english'))
 
@@ -39,16 +38,11 @@ except:
     lemmatizer = WordNetLemmatizer()
 
 # ---------------- LOAD MODEL ----------------
-try:
-    model = joblib.load(MODEL_PATH)
-    vectorizer = joblib.load(VECTORIZER_PATH)
-    print(" Model & Vectorizer loaded successfully")
-except Exception as e:
-    print(" Error loading model:", e)
-    model = None
-    vectorizer = None
+model = joblib.load(MODEL_PATH)
+vectorizer = joblib.load(VECTORIZER_PATH)
+print("Model loaded")
 
-# ----------------  FUNCTIONS ----------------
+# ---------------- CLEAN ----------------
 def clean_text(text):
     text = str(text).lower()
     text = re.sub(r'http\S+|www\S+', 'URL', text)
@@ -58,8 +52,11 @@ def clean_text(text):
     words = [lemmatizer.lemmatize(w) for w in words if w not in stop_words]
     return " ".join(words)
 
+# ---------------- FEATURES (MATCH TRAINING) ----------------
 def extract_features(text):
-    text = str(text)
+    if not isinstance(text, str):
+        text = ""
+
     words = text.split()
     text_lower = text.lower()
 
@@ -75,15 +72,21 @@ def extract_features(text):
         except:
             pass
 
+    misspellings = ['recieve','seperate','definately','occured','untill','wich']
+    spelling_errors = sum(text_lower.count(m) for m in misspellings)
+    spelling_errors += len(re.findall(r'(.)\1{2,}', text))
+
     urgent = ['urgent','immediate','verify','update','confirm','account',
               'security','alert','suspended','click','link','password']
 
     return np.array([[
         len(words),
         len(set(words)),
+        sum(1 for w in words if w.lower() in stop_words),
         len(urls),
         len(domains),
         len(emails),
+        spelling_errors,
         sum(text_lower.count(k) for k in urgent)
     ]])
 
@@ -113,17 +116,14 @@ def predict():
         })
 
     except Exception as e:
-        print("Prediction error:", e)
+        print("Error:", e)
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/")
 def home():
     return "API Running"
 
-# ---------------- RUN ----------------
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
-print("Files in directory:", os.listdir())
-
-    
+    app.run()
