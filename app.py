@@ -3,6 +3,7 @@ from flask_cors import CORS
 import joblib
 import re
 import os
+import nltk
 import string
 import numpy as np
 
