@@ -7,7 +7,7 @@ import numpy as np
 import os
 import nltk
 
-from nltk.corpus import stopwords, wordnet
+from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from urllib.parse import urlparse
 from scipy.sparse import hstack
@@ -22,20 +22,28 @@ VECTORIZER_PATH = os.environ.get("VECTORIZER_PATH", "vectorizer.pkl")
 THRESHOLD = float(os.environ.get("THRESHOLD", 0.4))
 NLTK_DATA = os.environ.get("NLTK_DATA", "/opt/render/nltk_data")
 
+# ---------------- NLTK ----------------
 nltk.data.path.append(NLTK_DATA)
 
-# ---------------- NLTK ----------------
-try:
-    stop_words = set(stopwords.words('english'))
-except:
-    nltk.download('stopwords')
-    stop_words = set(stopwords.words('english'))
+# ---------------- SAFE NLTK LOADING ----------------
+def safe_load_stopwords():
+    try:
+        return set(stopwords.words("english"))
+    except LookupError:
+        nltk.download("stopwords", download_dir=NLTK_DATA)
+        return set(stopwords.words("english"))
 
-try:
-    lemmatizer = WordNetLemmatizer()
-except:
-    nltk.download('wordnet')
-    lemmatizer = WordNetLemmatizer()
+def safe_lemmatizer():
+    try:
+        return WordNetLemmatizer()
+    except LookupError:
+        nltk.download("wordnet", download_dir=NLTK_DATA)
+        nltk.download("omw-1.4", download_dir=NLTK_DATA)
+        return WordNetLemmatizer()
+
+# Initialize once (IMPORTANT for Render performance)
+stop_words = safe_load_stopwords()
+lemmatizer = safe_lemmatizer()
 
 # ---------------- LOAD MODEL ----------------
 model = joblib.load(MODEL_PATH)
