@@ -102,11 +102,14 @@ from scipy.sparse import hstack #Means horizontal stacking, Used to combine two 
 
 # TF-IDF
 vectorizer = TfidfVectorizer(max_features=3000) #Keeps only top 3000 important words
+
 #Convert Text into Features
-X_text = vectorizer.fit_transform(df['cleaned_text'])   
+X_text = vectorizer.fit_transform(df['cleaned_text'])  
+
 # Combine both features
 # Features (X)
-X = hstack((X_text, df_features.values))    
+X = hstack((X_text, df_features.values))   
+ 
 # Target (y)
 y = df['label']
 
@@ -125,7 +128,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # Train
-model = LogisticRegression(max_iter=1000, class_weight={0:1, 1:2})
+model = LogisticRegression(max_iter=3000, class_weight={0:1, 1:2})
 model.fit(X_train, y_train)
 
 # Predict
@@ -141,3 +144,10 @@ y_pred = (y_prob >= threshold).astype(int)
 print("Accuracy:", accuracy_score(y_test, y_pred))
 print(classification_report(y_test, y_pred))
 print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
+
+
+#it will create model.pkl, vectorizer.pkl files in the current directory, which can be loaded later for making predictions on new emails without retraining the model.
+import joblib
+
+joblib.dump(model, "model.pkl")
+joblib.dump(vectorizer, "vectorizer.pkl")
