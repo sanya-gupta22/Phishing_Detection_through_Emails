@@ -13,6 +13,28 @@ from scipy.sparse import hstack
 app = Flask(__name__)
 CORS(app)
 
+# ---------------- ENV VARIABLES ----------------
+MODEL_PATH = os.environ.get("MODEL_PATH", "model.pkl")
+VECTORIZER_PATH = os.environ.get("VECTORIZER_PATH", "vectorizer.pkl")
+THRESHOLD = float(os.environ.get("THRESHOLD", 0.4))
+
+# Optional: for Render NLTK fix
+NLTK_DATA_PATH = os.environ.get("NLTK_DATA", "/opt/render/nltk_data")
+
+# ---------------- NLTK SETUP ----------------
+nltk.data.path.append(NLTK_DATA_PATH)
+try:
+    stop_words = set(stopwords.words('english'))
+except LookupError:
+    nltk.download('stopwords')
+    stop_words = set(stopwords.words('english'))
+
+try:
+    lemmatizer = WordNetLemmatizer()
+except:
+    nltk.download('wordnet')
+    lemmatizer = WordNetLemmatizer()
+
 # Load
 model = joblib.load("model.pkl")
 vectorizer = joblib.load("vectorizer.pkl")
