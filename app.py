@@ -22,28 +22,31 @@ VECTORIZER_PATH = os.environ.get("VECTORIZER_PATH", "vectorizer.pkl")
 THRESHOLD = float(os.environ.get("THRESHOLD", 0.4))
 NLTK_DATA = os.environ.get("NLTK_DATA", "/opt/render/nltk_data")
 
-# ---------------- NLTK ----------------
+# ---------------- NLTK SETUP ----------------
+# Add NLTK data path before downloading
 nltk.data.path.append(NLTK_DATA)
 
-# ---------------- SAFE NLTK LOADING ----------------
-def safe_load_stopwords():
-    try:
-        return set(stopwords.words("english"))
-    except LookupError:
-        nltk.download("stopwords", download_dir=NLTK_DATA)
-        return set(stopwords.words("english"))
+# Create directory if it doesn't exist
+os.makedirs(NLTK_DATA, exist_ok=True)
 
-def safe_lemmatizer():
-    try:
-        return WordNetLemmatizer()
-    except LookupError:
-        nltk.download("wordnet", download_dir=NLTK_DATA)
-        nltk.download("omw-1.4", download_dir=NLTK_DATA)
-        return WordNetLemmatizer()
+# Download required NLTK data
+def download_nltk_resources():
+    resources = ['stopwords', 'wordnet', 'omw-1.4']
+    for resource in resources:
+        try:
+            nltk.data.find(f'tokenizers/{resource}' if resource == 'punkt' else f'corpora/{resource}')
+        except LookupError:
+            print(f"Downloading {resource}...")
+            nltk.download(resource, download_dir=NLTK_DATA, quiet=False)
 
-# Initialize once (IMPORTANT for Render performance)
-stop_words = safe_load_stopwords()
-lemmatizer = safe_lemmatizer()
+# Download all resources at startup
+download_nltk_resources()
+
+# Now import and initialize
+stop_words = set(stopwords.words("english"))
+lemmatizer = WordNetLemmatizer()
+
+print("NLTK resources loaded successfully")
 
 # ---------------- LOAD MODEL ----------------
 model = joblib.load(MODEL_PATH)
@@ -127,11 +130,9 @@ def predict():
         print("Error:", e)
         return jsonify({"error": str(e)}), 500
 
-
 @app.route("/")
 def home():
     return "API Running"
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
