@@ -12,6 +12,7 @@ from nltk.stem import WordNetLemmatizer
 from urllib.parse import urlparse
 from scipy.sparse import hstack
 
+nltk.data.path.append(os.path.join(os.getcwd(), "nltk_data"))
 app = Flask(__name__)
 CORS(app)
 
