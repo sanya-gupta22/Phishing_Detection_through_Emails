@@ -5,6 +5,7 @@ import re
 import string
 import numpy as np
 import os
+import nltk
 
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
@@ -20,11 +21,10 @@ VECTORIZER_PATH = os.environ.get("VECTORIZER_PATH", "vectorizer.pkl")
 THRESHOLD = float(os.environ.get("THRESHOLD", 0.4))
 
 # Optional: for Render NLTK fix
-NLTK_DATA_PATH = os.environ.get("NLTK_DATA", "/opt/render/nltk_data")
-nltk.data.path.append(NLTK_DATA_PATH)
+NLTK_DATA = os.environ.get("NLTK_DATA", "/opt/render/nltk_data")
 
 # ---------------- NLTK SETUP ----------------
-nltk.data.path.append(NLTK_DATA_PATH)
+nltk.data.path.append(NLTK_DATA)
 try:
     stop_words = set(stopwords.words('english'))
 except LookupError:
@@ -89,25 +89,31 @@ def extract_features(text):
 # ---------------- API ----------------
 @app.route("/predict", methods=["POST"])
 def predict():
-    if model is None or vectorizer is None:
-        return jsonify({"error": "Model not loaded"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        text = data.get("text", "")
 
-    data = request.json.get("text", "")
+        if not text:
+            return jsonify({"error": "No text provided"}), 400
 
-    cleaned = clean_text(data)
-    text_vec = vectorizer.transform([cleaned])
-    extra = extract_features(data)
+        cleaned = clean_text(text)
+        text_vec = vectorizer.transform([cleaned])
+        extra = extract_features(text)
 
-    final_input = hstack((text_vec, extra))
+        final_input = hstack((text_vec, extra))
 
-    prob = model.predict_proba(final_input)[0][1]
-    pred = int(prob >= THRESHOLD)
+        prob = model.predict_proba(final_input)[0][1]
+        pred = int(prob >= THRESHOLD)
 
-    return jsonify({
-        "prediction": pred,
-        "label": "Phishing" if pred else "Safe",
-        "confidence": round(float(prob), 3)
-    })
+        return jsonify({
+            "prediction": pred,
+            "label": "Phishing" if pred else "Safe",
+            "confidence": round(float(prob), 3)
+        })
+
+    except Exception as e:
+        print("Prediction error:", e)
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/")
 def home():
@@ -116,5 +122,7 @@ def home():
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+print("Files in directory:", os.listdir())
 
     
