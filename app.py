@@ -9,7 +9,9 @@ from scipy.sparse import hstack
 
 # ---------------- INIT ----------------
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={
+    r"/*": {"origins": "*"}
+})
 
 # ---------------- ENV ----------------
 MODEL_PATH = os.environ.get("MODEL_PATH", "model.pkl")
