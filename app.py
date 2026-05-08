@@ -5,7 +5,6 @@ import numpy as np
 import os
 import nltk
 
-from preprocessing import clean_text, extract_features
 from scipy.sparse import hstack
 
 # ---------------- INIT ----------------
@@ -38,6 +37,8 @@ def download_nltk_resources():
 # Download all resources at startup
 download_nltk_resources()
 print("NLTK resources loaded successfully")
+
+from preprocessing import clean_text, extract_features
 
 # ---------------- LOAD MODEL ----------------
 model = joblib.load(MODEL_PATH)
