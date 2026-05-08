@@ -1,67 +1,26 @@
 import pandas as pd
 import numpy as np
-import re
-import string
+import os 
 import joblib
 
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from urllib.parse import urlparse
-
+from preprocessing import clean_text, extract_features
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy.sparse import hstack
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 
 # Load data
-df = pd.read_csv("phishing_email.csv")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-stop_words = set(stopwords.words('english'))
-lemmatizer = WordNetLemmatizer()
+csv_path = os.path.join(BASE_DIR, "phishing_email.csv")
 
-# ---------------- CLEAN TEXT ----------------
-def clean_text(text):
-    text = str(text).lower()
-    text = re.sub(r'http\S+|www\S+', 'URL', text)
-    text = re.sub(r'\d+', '', text)
-    text = text.translate(str.maketrans('', '', string.punctuation))
-    words = text.split()
-    words = [lemmatizer.lemmatize(w) for w in words if w not in stop_words]
-    return " ".join(words)
-
-# ---------------- FEATURES ----------------
-def extract_features(text):
-    text = str(text)
-    words = text.split()
-    text_lower = text.lower()
-
-    urls = re.findall(r'http[s]?://\S+', text, re.I)
-    emails = re.findall(r'\b[\w\.-]+@[\w\.-]+\.\w+\b', text, re.I)
-
-    domains = set()
-    for url in urls:
-        try:
-            domain = urlparse(url).netloc
-            if domain:
-                domains.add(domain)
-        except:
-            pass
-
-    urgent = ['urgent','immediate','verify','update','confirm','account',
-              'security','alert','suspended','click','link','password']
-
-    return [
-        len(words),
-        len(set(words)),
-        len(urls),
-        len(domains),
-        len(emails),
-        sum(text_lower.count(k) for k in urgent)
-    ]
+df = pd.read_csv(csv_path)
 
 # Apply preprocessing
 df['cleaned'] = df['text_combined'].apply(clean_text)
-extra_features = np.array(df['text_combined'].apply(extract_features).tolist())
+extra_features = np.vstack(
+    df['text_combined'].apply(extract_features).values
+)
 
 # TF-IDF
 vectorizer = TfidfVectorizer(max_features=3000)
